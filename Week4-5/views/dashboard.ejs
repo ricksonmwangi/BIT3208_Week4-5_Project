@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard – BIT3208</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="layout">
+  <%- include('partials/sidebar', { token, activePage: 'dashboard' }) %>
+  <div class="main">
+    <%- include('partials/topbar', { title: 'Dashboard', user }) %>
+    <div class="content">
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">📋 Total Students</div>
+          <div class="value" id="statStudents">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">👤 Logged in as</div>
+          <div class="value" style="font-size:1.1rem; padding-top:.4rem;"><%= user.username %></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">🔐 Auth Method</div>
+          <div class="value" style="font-size:1rem; padding-top:.4rem; color:#16a34a;">JWT Token</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">🗄️ Database</div>
+          <div class="value" style="font-size:1rem; padding-top:.4rem; color:#d97706;">MySQL</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Quick Actions</h3>
+        </div>
+        <div style="padding:1.25rem; display:flex; gap:.75rem; flex-wrap:wrap;">
+          <a href="/students?token=<%= token %>" class="btn btn-primary">👥 View Students</a>
+          <a href="/students/add?token=<%= token %>" class="btn btn-success">➕ Add Student</a>
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem; background:#1e293b; border-radius:8px; padding:1.25rem; color:#94a3b8; font-family:monospace; font-size:.8rem;">
+        <div style="color:#60a5fa; margin-bottom:.5rem;">// DB Connection String (.env)</div>
+        <div style="color:#a3e635;">DATABASE_URL=mysql://root:@localhost:3306/bit3208_week5db</div>
+        <br>
+        <div style="color:#60a5fa;">// JWT Auth – token stored in localStorage</div>
+        <div style="color:#f9a8d4; word-break:break-all;">Token: <span id="tokenDisplay"></span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script>
+  const t = localStorage.getItem('jwt_token') || '';
+  document.getElementById('tokenDisplay').textContent = t ? t.substring(0,60)+'…' : '(none)';
+  // Fetch student count
+  fetch('/students?token=' + encodeURIComponent('<%= token %>'), { headers: { 'X-Count-Only': '1' } })
+    .catch(() => {});
+  document.getElementById('statStudents').textContent = '–';
+</script>
+</body>
+</html>

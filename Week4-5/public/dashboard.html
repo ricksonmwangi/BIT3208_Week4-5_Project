@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard – BIT3208</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="dashboard">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">📚 BIT3208 SMS</div>
+      <nav>
+        <a href="#" class="active" onclick="showSection('students')">👥 Students</a>
+        <a href="#" onclick="showSection('about')">ℹ️ About Project</a>
+      </nav>
+      <div style="padding:1rem 1.5rem;font-size:.78rem;color:#475569;border-top:1px solid #334155;margin-top:auto">
+        Logged in as:<br>
+        <strong id="sidebarUser" style="color:#94a3b8"></strong>
+      </div>
+      <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <!-- Students section -->
+      <div id="section-students">
+        <div class="page-header">
+          <h2>Student Records</h2>
+          <button class="btn btn-primary" onclick="openModal()">+ Add Student</button>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="label">Total Students</div>
+            <div class="value" id="totalCount">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Database</div>
+            <div class="value" style="font-size:1.1rem;padding-top:.5rem">bit3208db</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Auth Method</div>
+            <div class="value" style="font-size:1rem;padding-top:.5rem">JWT Token</div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <h3>All Students</h3>
+            <button class="btn btn-outline" onclick="loadStudents()">↺ Refresh</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Admission No</th>
+                  <th>Full Name</th>
+                  <th>Email</th>
+                  <th>Course</th>
+                  <th>Year</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="studentTable">
+                <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:2rem">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- About section -->
+      <div id="section-about" style="display:none">
+        <div class="page-header"><h2>About This Project</h2></div>
+        <div class="table-card" style="padding:1.5rem">
+          <p><strong>Unit:</strong> BIT3208 – Advanced Web Design and Development</p>
+          <p style="margin-top:.75rem"><strong>Stack:</strong> Node.js · Express · MySQL</p>
+          <p style="margin-top:.75rem"><strong>Authentication:</strong> JSON Web Tokens (JWT) stored in localStorage — no cookies used</p>
+          <p style="margin-top:.75rem"><strong>Connection string:</strong> <code>mysql://root@localhost:3306/bit3208db</code></p>
+          <p style="margin-top:.75rem"><strong>CRUD:</strong> Create · Read · Update · Delete on the students table</p>
+          <p style="margin-top:.75rem"><strong>Weeks covered:</strong> Week 4 (forms, auth, JWT) + Week 5 (database, CRUD)</p>
+          <p style="margin-top:.75rem"><strong>Lecturer:</strong> Lec Nyoro</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add / Edit Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3 id="modalTitle">Add Student</h3>
+      <div id="modalAlert" class="alert"></div>
+      <div class="form-group">
+        <label>Admission Number</label>
+        <input type="text" id="f_admission" placeholder="BIT/001/2024">
+      </div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="f_name" placeholder="Jane Doe">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="f_email" placeholder="jane@student.ac.ke">
+      </div>
+      <div class="form-group">
+        <label>Course</label>
+        <input type="text" id="f_course" placeholder="Bachelor of IT">
+      </div>
+      <div class="form-group">
+        <label>Year of Study</label>
+        <select id="f_year">
+          <option value="1">Year 1</option>
+          <option value="2">Year 2</option>
+          <option value="3" selected>Year 3</option>
+          <option value="4">Year 4</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" id="saveBtn" onclick="saveStudent()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // ── Auth check (JWT from localStorage – no cookies) ──────────
+    const token = localStorage.getItem('token');
+    const user  = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!token) window.location.href = '/login';
+    document.getElementById('sidebarUser').textContent = user.username || '';
+
+    const authHeaders = () => ({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+
+    function showSection(name) {
+      ['students','about'].forEach(s => {
+        document.getElementById(`section-${s}`).style.display = s === name ? '' : 'none';
+      });
+      document.querySelectorAll('.sidebar nav a').forEach((a, i) => {
+        a.classList.toggle('active', ['students','about'][i] === name);
+      });
+    }
+
+    function toast(msg, ok=true) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.style.background = ok ? '#166534' : '#991b1b';
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    // ── CRUD ──────────────────────────────────────────────────────
+    let editingId = null;
+
+    async function loadStudents() {
+      try {
+        const res  = await fetch('/api/students', { headers: authHeaders() });
+        if (res.status === 401) return logout();
+        const data = await res.json();
+        document.getElementById('totalCount').textContent = data.count;
+        const tbody = document.getElementById('studentTable');
+        if (!data.data.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:2rem">No students yet. Click "+ Add Student".</td></tr>'; return; }
+        tbody.innerHTML = data.data.map((s, i) => `
+          <tr>
+            <td>${i+1}</td>
+            <td><span class="badge badge-blue">${s.admission_no}</span></td>
+            <td>${s.full_name}</td>
+            <td>${s.email}</td>
+            <td>${s.course}</td>
+            <td>Year ${s.year_of_study}</td>
+            <td>
+              <div class="actions">
+                <button class="btn btn-outline" style="padding:.35rem .7rem;font-size:.8rem" onclick="editStudent(${s.id})">Edit</button>
+                <button class="btn btn-danger"  style="padding:.35rem .7rem;font-size:.8rem" onclick="deleteStudent(${s.id},'${s.full_name}')">Delete</button>
+              </div>
+            </td>
+          </tr>`).join('');
+      } catch (e) { toast('Failed to load students.', false); }
+    }
+
+    function openModal(data=null) {
+      editingId = data ? data.id : null;
+      document.getElementById('modalTitle').textContent = data ? 'Edit Student' : 'Add Student';
+      document.getElementById('f_admission').value = data?.admission_no || '';
+      document.getElementById('f_name').value      = data?.full_name    || '';
+      document.getElementById('f_email').value     = data?.email        || '';
+      document.getElementById('f_course').value    = data?.course       || '';
+      document.getElementById('f_year').value      = data?.year_of_study || '3';
+      document.getElementById('modalAlert').className = 'alert';
+      document.getElementById('modalOverlay').classList.add('open');
+    }
+    function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+
+    async function editStudent(id) {
+      const res  = await fetch(`/api/students/${id}`, { headers: authHeaders() });
+      const data = await res.json();
+      if (data.success) openModal(data.data);
+    }
+
+    async function saveStudent() {
+      const body = {
+        admission_no:  document.getElementById('f_admission').value.trim(),
+        full_name:     document.getElementById('f_name').value.trim(),
+        email:         document.getElementById('f_email').value.trim(),
+        course:        document.getElementById('f_course').value.trim(),
+        year_of_study: document.getElementById('f_year').value,
+      };
+      const alertEl = document.getElementById('modalAlert');
+      const url    = editingId ? `/api/students/${editingId}` : '/api/students';
+      const method = editingId ? 'PUT' : 'POST';
+      const btn    = document.getElementById('saveBtn');
+      btn.disabled = true;
+
+      try {
+        const res  = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) });
+        const data = await res.json();
+        if (!data.success) {
+          const msg = data.message || (data.errors && data.errors.map(e=>e.msg).join(', '));
+          alertEl.textContent = msg; alertEl.className = 'alert alert-danger show';
+          btn.disabled = false; return;
+        }
+        closeModal(); toast(data.message); loadStudents();
+      } catch (e) { alertEl.textContent = 'Network error.'; alertEl.className='alert alert-danger show'; }
+      btn.disabled = false;
+    }
+
+    async function deleteStudent(id, name) {
+      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+      const res  = await fetch(`/api/students/${id}`, { method:'DELETE', headers: authHeaders() });
+      const data = await res.json();
+      toast(data.message, data.success);
+      if (data.success) loadStudents();
+    }
+
+    // Init
+    loadStudents();
+  </script>
+</body>
+</html>

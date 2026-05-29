@@ -1,0 +1,12 @@
+<div class="sidebar">
+  <div class="sidebar-logo">🎓 <span>BIT</span>3208</div>
+  <nav>
+    <a href="/dashboard?token=<%= token %>" class="<%= activePage==='dashboard'?'active':'' %>">🏠 Dashboard</a>
+    <a href="/students?token=<%= token %>"  class="<%= activePage==='students'?'active':'' %>">👥 Students</a>
+    <a href="/students/add?token=<%= token %>" class="<%= activePage==='add'?'active':'' %>">➕ Add Student</a>
+  </nav>
+  <div class="sidebar-footer">
+    Week 4-5 Project<br>
+    <a href="/logout">🚪 Logout</a>
+  </div>
+</div>
