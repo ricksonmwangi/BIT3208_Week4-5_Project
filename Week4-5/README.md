@@ -48,7 +48,7 @@ Login Details
 After running the SQL file, you can login with:
 
 Email	Password
-admin@bit3208.ac.ke	Admin@1234
+'adminhuan3@gmail.com'	@Adminhuan1234
 If you register a new account, use that instead.
 
 Database Connection
