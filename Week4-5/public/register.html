@@ -13,63 +13,209 @@
       <h1>Create account</h1>
       <p class="sub">Fill in the form below to register</p>
       <div id="alert" class="alert"></div>
+      
       <div class="form-group">
         <label>Username</label>
         <input type="text" id="username" placeholder="johndoe">
       </div>
+      
       <div class="form-group">
         <label>Email address</label>
         <input type="email" id="email" placeholder="you@example.com">
       </div>
+      
       <div class="form-group">
-        <label>Password <span id="strength" style="float:right;font-size:.78rem;font-weight:400"></span></label>
-        <input type="password" id="password" placeholder="Min 6 characters">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Create a strong password">
+        
+        <!-- Password Strength Meter -->
+        <div class="strength-container">
+          <div id="strength-meter">
+            <div id="strength-bar"></div>
+          </div>
+          <div class="strength-header">
+            <span id="strength-text"></span>
+            <span id="strength-percent">0%</span>
+          </div>
+        </div>
+
+        <!-- Password Requirements Checklist -->
+        <div class="password-requirements">
+          <small>Password must contain:</small>
+          <ul id="req-list">
+            <li id="req-length">✓ 8+ characters</li>
+            <li id="req-lower">✓ Lowercase letter (a-z)</li>
+            <li id="req-upper">✓ Uppercase letter (A-Z)</li>
+            <li id="req-number">✓ Number (0-9)</li>
+            <li id="req-special">✓ Special character (!@#$%^&*)</li>
+          </ul>
+        </div>
       </div>
+      
       <button class="btn btn-primary btn-full" id="regBtn">Create Account</button>
       <p class="link-row">Already have an account? <a href="/login">Sign in</a></p>
     </div>
   </div>
+
   <script>
-    // Password strength indicator (Week 3 concept: JS form validation)
-    document.getElementById('password').addEventListener('input', function() {
-      const v = this.value, el = document.getElementById('strength');
-      if (!v) { el.textContent = ''; return; }
-      let s = 0;
-      if (v.length >= 8) s++;
-      if (/[A-Z]/.test(v)) s++;
-      if (/[0-9]/.test(v)) s++;
-      if (/[^A-Za-z0-9]/.test(v)) s++;
-      const labels = ['','Weak','Fair','Good','Strong'];
-      const colors = ['','#ef4444','#f59e0b','#3b82f6','#22c55e'];
-      el.textContent = labels[s] || 'Weak';
-      el.style.color = colors[s] || colors[1];
+    // ============================================
+    // ENHANCED PASSWORD STRENGTH CHECKER (Regex-based)
+    // ============================================
+    
+    // Regex patterns for password validation
+    const patterns = {
+      length: /.{8,}/,
+      lower: /[a-z]/,
+      upper: /[A-Z]/,
+      number: /[0-9]/,
+      special: /[!@#$%^&*(),.?":{}|<>]/
+    };
+
+    function checkPasswordStrength(password) {
+      let score = 0;
+      let checks = {};
+      
+      checks.length = patterns.length.test(password);
+      checks.lower = patterns.lower.test(password);
+      checks.upper = patterns.upper.test(password);
+      checks.number = patterns.number.test(password);
+      checks.special = patterns.special.test(password);
+      
+      for (let key in checks) {
+        if (checks[key]) score++;
+      }
+      
+      return { score, checks };
+    }
+
+    function updateStrengthUI(password) {
+      const { score, checks } = checkPasswordStrength(password);
+      const strengthBar = document.getElementById('strength-bar');
+      const strengthText = document.getElementById('strength-text');
+      const strengthPercent = document.getElementById('strength-percent');
+      
+      const percent = (score / 5) * 100;
+      strengthPercent.textContent = `${Math.floor(percent)}%`;
+      strengthBar.style.width = `${percent}%`;
+      
+      if (password.length === 0) {
+        strengthBar.style.width = '0%';
+        strengthText.innerHTML = '';
+        strengthPercent.textContent = '0%';
+      } else if (score <= 2) {
+        strengthBar.className = 'strength-weak';
+        strengthText.innerHTML = '⚠️ Weak password - please make it stronger';
+      } else if (score <= 3) {
+        strengthBar.className = 'strength-fair';
+        strengthText.innerHTML = '⚠️ Fair password - could be stronger';
+      } else if (score <= 4) {
+        strengthBar.className = 'strength-good';
+        strengthText.innerHTML = '✅ Good password!';
+      } else {
+        strengthBar.className = 'strength-strong';
+        strengthText.innerHTML = '✅ Strong password! Excellent!';
+      }
+      
+      updateRequirementsUI(checks);
+      return { score, checks };
+    }
+
+    function updateRequirementsUI(checks) {
+      const requirements = {
+        length: 'req-length',
+        lower: 'req-lower',
+        upper: 'req-upper',
+        number: 'req-number',
+        special: 'req-special'
+      };
+      
+      for (let [req, elementId] of Object.entries(requirements)) {
+        const element = document.getElementById(elementId);
+        if (checks[req]) {
+          element.classList.add('req-met');
+          element.classList.remove('req-unmet');
+          element.innerHTML = `✓ ${element.innerHTML.substring(2)}`;
+        } else {
+          element.classList.add('req-unmet');
+          element.classList.remove('req-met');
+          element.innerHTML = `✗ ${element.innerHTML.substring(2)}`;
+        }
+      }
+    }
+
+    function isPasswordStrong(password) {
+      const { score, checks } = checkPasswordStrength(password);
+      return score === 5;
+    }
+
+    function getPasswordRequirementsMessage(checks) {
+      const missing = [];
+      if (!checks.length) missing.push('8+ characters');
+      if (!checks.lower) missing.push('lowercase letter');
+      if (!checks.upper) missing.push('uppercase letter');
+      if (!checks.number) missing.push('number');
+      if (!checks.special) missing.push('special character (!@#$%^&*)');
+      return missing;
+    }
+
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+    
+    const passwordInput = document.getElementById('password');
+    passwordInput.addEventListener('input', function() {
+      updateStrengthUI(this.value);
     });
 
-    const show = (msg, type='danger') => {
+    const show = (msg, type = 'danger') => {
       const el = document.getElementById('alert');
-      el.textContent = msg; el.className = `alert alert-${type} show`;
+      el.textContent = msg;
+      el.className = `alert alert-${type} show`;
     };
 
     document.getElementById('regBtn').addEventListener('click', async () => {
       const username = document.getElementById('username').value.trim();
-      const email    = document.getElementById('email').value.trim();
+      const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
-      if (!username || !email || !password) return show('All fields are required.');
-      if (password.length < 6) return show('Password must be at least 6 characters.');
+      
+      if (!username || !email || !password) {
+        return show('All fields are required.');
+      }
+      
+      const { score, checks } = checkPasswordStrength(password);
+      
+      if (score < 5) {
+        const missing = getPasswordRequirementsMessage(checks);
+        return show(`Password too weak! Missing: ${missing.join(', ')}`);
+      }
 
       const btn = document.getElementById('regBtn');
-      btn.disabled = true; btn.textContent = 'Creating…';
+      btn.disabled = true;
+      btn.textContent = 'Creating…';
 
       try {
-        const res  = await fetch('/api/auth/register', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, email, password }),
         });
         const data = await res.json();
-        if (!data.success) { show(data.message || JSON.stringify(data.errors)); btn.disabled=false; btn.textContent='Create Account'; return; }
+        
+        if (!data.success) {
+          show(data.message || JSON.stringify(data.errors));
+          btn.disabled = false;
+          btn.textContent = 'Create Account';
+          return;
+        }
+        
         show('Account created! Redirecting to login…', 'success');
         setTimeout(() => window.location.href = '/login', 1500);
-      } catch (e) { show('Network error.'); btn.disabled=false; btn.textContent='Create Account'; }
+        
+      } catch (e) {
+        show('Network error. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+      }
     });
   </script>
 </body>
